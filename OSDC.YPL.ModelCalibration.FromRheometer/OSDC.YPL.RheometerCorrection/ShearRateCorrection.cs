@@ -27,6 +27,9 @@ namespace OSDC.YPL.RheometerCorrection
         public static double GetShearRate(double r1, double r2, double k, double n, double tau_y, double omega)
         {
             double minV = FindMinimumRotationalVelocity(tau_y, k, r1 / r2, n);
+
+
+
             if (omega > minV)
             {
                 return GetFullyShearedShearRate(r1, r2, k, n, tau_y, omega);
@@ -57,16 +60,16 @@ namespace OSDC.YPL.RheometerCorrection
 
         public static double GetFullyShearedShearRate(double r1, double r2, double k, double n, double tau_y, double omega)
         {
-            double c = CalculateC(k, omega, tau_y, n, r1, r2);
-            
-            System.Diagnostics.Debug.WriteLine($"Integration constant c for omega = {omega * 60} is {c}");
+            double c = CalculateC(k, omega, tau_y, n, r1, r2);         
+
+
 
 
 
             //tex: $\tau(r) = c / r^2$
-            double tau_r = c / (r1 * r1); 
+            double tau_r = c / (r1 * r1);
 
-            //tex: $$ \dot{\gamma}(r) = \left[ \left(\frac{\tau_y}{k} \right) \left( \frac{\tau (r)}{\tau_y} \right) -1 \right]^{ \frac 1n }$$
+            //tex: $$ \dot{\gamma}(r) = \left[ \left(\frac{\tau_y}{k} \right) \left( \frac{\tau (r)}{\tau_y}  -1 \right)\right]^{ \frac 1n }$$
             //with $r = R_1$
 
 
@@ -140,8 +143,8 @@ namespace OSDC.YPL.RheometerCorrection
             double leftHandSide =omega* System.Math.Pow( k / tau_y, 1.0 / n);
 
             //tex: initialize the search with Newtonian value: $c = 2 \mu \Omega \kappa^2 R_2^2 / (1-\kappa^2)$, with $\mu = k$. 
-            
-            double c = 2 * k * omega * kappa * kappa * r2 * r2 / (1 - kappa * kappa);
+
+            double c = 0.005;// 2 * k * omega * kappa * kappa * r2 * r2 / (1 - kappa * kappa);
 
             double diff = leftHandSide - IntegrationEquation8(c, kappa, n, tau_y, r2);
 
@@ -216,7 +219,9 @@ namespace OSDC.YPL.RheometerCorrection
                 double x_l = kappa + i * step;
                 double x_r = kappa + (i + 1) * step;
                 double y_l = (1.0 / x_l) * System.Math.Pow(rPlug * rPlug / (r2 *r2 * x_l * x_l) - 1, oneOverN);
-                double y_r = (1.0 / x_r) * System.Math.Pow(rPlug * rPlug / (r2 * r2 * x_r * x_r) - 1, oneOverN);
+                double t = rPlug * rPlug / (r2 * r2 * x_r * x_r);
+
+                double y_r = t>1 ? (1.0 / x_r) * System.Math.Pow(rPlug * rPlug / (r2 * r2 * x_r * x_r) - 1, oneOverN) : y_l;
 
                 integral += (y_l + y_r) * .5 * step;
             }

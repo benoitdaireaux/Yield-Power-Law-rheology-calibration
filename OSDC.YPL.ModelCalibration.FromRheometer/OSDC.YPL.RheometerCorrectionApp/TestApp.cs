@@ -20,39 +20,44 @@ namespace OSDC.YPL.RheometerCorrectionApp
 
             PlotFigure2();
             PlotFigure4();
-            PlotIntegral8();
+            PlotIntegral8(n:0.2);
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
 
         }
+        public const double RPM_TO_RADIAN_PER_SEC = Math.PI / 30.0;
 
 
         private void PlotIntegral8( double r1 = .017245, double r2 = 0.018415, double tau_y = 5.0, double k = .1, double n = .5)
         {
+         
             var myModel = new PlotModel() { Title = "Integral 8" };
 
             var s1 = new LineSeries() { Title = "n = 0.5" };
             for (int i = 0; i < 100; i++)
             {
-                double c = .001 + (double)i * 0.001 / 99;
+                double c = .001 + (double)i * 0.002 / 99;
                 s1.Points.Add(new DataPoint(c, OSDC.YPL.RheometerCorrection.ShearRateCorrection.IntegrationEquation8(c, r1 / r2, n, tau_y, r2)));
             }
             myModel.Series.Add(s1);
 
-            double[] velocities = { 3.0, 6.0, 30, 60, 100, 200, 300 };
-            velocities = velocities.Select(d => d / 60.0).ToArray();
+            //double[] velocities = { 3.0, 6.0, 30, 60, 100, 200, 300 };
+            //velocities = velocities.Select(d => d / 60.0).ToArray();
 
+
+        double[] velocities = { 3.0, 6.0, 30, 60, 100, 200, 300 };
+        velocities = velocities.Select(d => d* RPM_TO_RADIAN_PER_SEC).ToArray();
 
 
             for (int i = 0; i < velocities.Length; i++)
             {
                 double y = velocities[i] * System.Math.Pow(k / tau_y, 1.0 / n);
 
-                var s = new LineSeries() { Title = "RPM = " + (velocities[i] * 60.0).ToString("F0") };
+                var s = new LineSeries() { Title = "RPM = " + (velocities[i] /RPM_TO_RADIAN_PER_SEC).ToString("F0") };
                 s.Points.Add(new DataPoint(.001, y));
-                s.Points.Add(new DataPoint(.002, y));
+                s.Points.Add(new DataPoint(.003, y));
 
                 double kappa = r1 / r2;
                 double yn = 2 * k * velocities[i] * kappa * kappa*r2*r2 / (1 - kappa * kappa);
@@ -115,7 +120,7 @@ namespace OSDC.YPL.RheometerCorrectionApp
         private void PlotFigure3()
         {
             double[] velocities = { 3.0, 6.0, 30, 60, 100, 200, 300 };
-            velocities = velocities.Select(d => d  / 60.0).ToArray();
+            velocities = velocities.Select(d => d * RPM_TO_RADIAN_PER_SEC).ToArray();
 
 
             var myModel = new PlotModel() { Title = "Integration curves" };
@@ -147,39 +152,48 @@ namespace OSDC.YPL.RheometerCorrectionApp
 
         private void PlotFigure4()
         {
-            double[] velocities = { 3.0, 6.0, 30, 60, 100, 200, 300 , 600};
-            velocities = velocities.Select(d => d / 60.0).ToArray();
+            double[] velocities = { 3.0, 6.0, 30, 60, 100, 200, 300 };
+            velocities = velocities.Select(d => d * RPM_TO_RADIAN_PER_SEC).ToArray();
 
+
+            double[] ns = { .5, .75, 1.0 };
+    
 
             var myModel = new PlotModel() { Title = "Integration curves" };
+            myModel.Axes.Add(new OxyPlot.Axes.LogarithmicAxis() { Position = OxyPlot.Axes.AxisPosition.Bottom, Title = "Revolutions per minute (1/min)" });
+            myModel.Axes.Add(new OxyPlot.Axes.LinearAxis() { Position = OxyPlot.Axes.AxisPosition.Left, Key = "YAXIS1", Title = "Wall shear rate ratio" });
 
-
-            var s1 = new LineSeries() { Title = "Ratio: n = 0.5" };
-            var s2 = new LineSeries() { Title = "Newtonian rates: n = 0.5" };
-            var s3 = new LineSeries() { Title = "Non-Newtonian rates: n = 0.5" };
-
-            GenerateFigure4(1.0 / 60.0, 600.0 / 60.0, out double[] xs, out double[] ratios, out double[] newtonianShearRates, out double[] nonNewtonianShearRates);
-         
-            for (int i = 0; i < ratios.Length; i++)
+            for (int j = 0; j < ns.Length; j++)
             {
-                s1.Points.Add(new OxyPlot.DataPoint(xs[i], ratios[i]));
-                s2.Points.Add(new OxyPlot.DataPoint(xs[i], newtonianShearRates[i]));
-                s3.Points.Add(new OxyPlot.DataPoint(xs[i], nonNewtonianShearRates[i]));
+                var s1 = new LineSeries() { Title = $"Ratio: n = {ns[j]}" };
+                var s2 = new LineSeries() { Title = $"Newtonian rates: n = {ns[j]}" };
+                var s3 = new LineSeries() { Title = $"Non-Newtonian rates: n = {ns[j]}" };
+
+                GenerateFigure4(1.0 / 60.0, 600.0 / 60.0, out double[] xs, out double[] ratios, out double[] newtonianShearRates, out double[] nonNewtonianShearRates, nbOfPoints: 1000, n:ns[j]);
+
+                for (int i = 0; i < ratios.Length; i++)
+                {
+                    s1.Points.Add(new OxyPlot.DataPoint(xs[i], ratios[i]));
+                    s2.Points.Add(new OxyPlot.DataPoint(xs[i], newtonianShearRates[i]));
+                    s3.Points.Add(new OxyPlot.DataPoint(xs[i], nonNewtonianShearRates[i]));
+                }
+
+
+
+                myModel.Series.Add(s1);
+                //myModel.Axes.Add(new OxyPlot.Axes.LinearAxis() { Position = OxyPlot.Axes.AxisPosition.Right, Key = "YAXIS2" });
+
+                s1.YAxisKey = "YAXIS1";
+                s2.YAxisKey = "YAXIS2";
+                s3.YAxisKey = "YAXIS2";
+
+                //myModel.Series.Add(s2);
+                //myModel.Series.Add(s3);
+
+
+
             }
 
-            
-
-            myModel.Series.Add(s1);
-            myModel.Axes.Add(new OxyPlot.Axes.LogarithmicAxis() { Position = OxyPlot.Axes.AxisPosition.Bottom });
-            myModel.Axes.Add(new OxyPlot.Axes.LinearAxis(){Position = OxyPlot.Axes.AxisPosition.Left, Key = "YAXIS1" });
-            myModel.Axes.Add(new OxyPlot.Axes.LinearAxis() { Position = OxyPlot.Axes.AxisPosition.Right, Key = "YAXIS2" });
-
-            s1.YAxisKey = "YAXIS1";
-            s2.YAxisKey = "YAXIS2";
-            s3.YAxisKey = "YAXIS2";
-
-            myModel.Series.Add(s2);
-            myModel.Series.Add(s3);
             myModel.Legends.Add(new OxyPlot.Legends.Legend());
 
             plotView1.Model = myModel;
@@ -191,13 +205,18 @@ namespace OSDC.YPL.RheometerCorrectionApp
             ratios = new double[nbOfPoints];
             newtonianRates = new double[nbOfPoints];
             nonNewtonianRates = new double[nbOfPoints];
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < nbOfPoints; i++)
             {
-                double omega = minRPM + i * (maxrpm - minRPM) / 99;
-
+                double omega = minRPM + i * (maxrpm - minRPM) / (nbOfPoints -1);// rotation per second
+                omega *= 2 * System.Math.PI;
                 double sr = OSDC.YPL.RheometerCorrection.ShearRateCorrection.GetShearRate(r1, r2, k, n, tau_y, omega);
                 double nsr = OSDC.YPL.RheometerCorrection.ShearRateCorrection.GetNewtonianShearRate(omega,  r1 / r2);
-                xs[i] = 60* omega;
+
+                if (double.IsNaN(sr) || double.IsNaN(nsr))
+                {
+                    System.Diagnostics.Debug.WriteLine("NaN!");
+                }
+                xs[i] =  omega / RPM_TO_RADIAN_PER_SEC;
                 ratios[i] = sr / nsr;
                 newtonianRates[i] = nsr;
                 nonNewtonianRates[i] = sr;
